@@ -21,16 +21,37 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.JointType;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.RoundCap;
+
+import com.google.android.gms.location.*;
+import com.google.android.gms.location.LocationListener;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.Toast;
 
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Date;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -44,17 +65,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     List<LatLng> points = new ArrayList<>(); // list of latlng
     int i = 0;
+    int zoomFlag = 1;
+    LatLng prev = new LatLng(0,0);
+
+    String currentTime = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        fetchLocation();
         Button button= findViewById(R.id.Start);
         button.setOnClickListener(new View.OnClickListener(){
             public void onClick(View v){
                 Toast.makeText(getApplicationContext(), "Tracking Started", Toast.LENGTH_SHORT).show();
-                fetchLocation();
+                zoomFlag = 0;
                 timer.scheduleAtFixedRate(new TimerTask(){
                     @Override
                     public void run() {
@@ -125,23 +151,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng coor = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
         points.add(coor);
 
-        /**for (int i = 0; i < points.size() - 1; i++) {
+        for (int i = 0; i < points.size() - 1; i++) {
             LatLng src = points.get(i);
             LatLng dest = points.get(i + 1);
 
             // mMap is the Map Object
             Polyline line = mMap.addPolyline(
                     new PolylineOptions().add(
+                            //new LatLng(src.latitude, src.longitude),
                             new LatLng(src.latitude, src.longitude),
-                            new LatLng(dest.latitude,dest.longitude)
+                            new LatLng(dest.latitude, dest.longitude)
                     ).width(15).color(Color.BLUE).startCap(new RoundCap()).jointType(JointType .ROUND).endCap(new RoundCap()).geodesic(true)
             );
-        }*/
-
-        mMap.addMarker(new MarkerOptions().position(coor).title("Currently Here"));
+        }
+        currentTime = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+        if(!prev.equals(coor))
+            mMap.addMarker(new MarkerOptions().position(coor).title(currentTime));
+        prev = coor;
         googleMap.animateCamera(CameraUpdateFactory.newLatLng(coor));
-        //mMap.moveCamera(CameraUpdateFactory.newLatLng(coor));
-        googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coor, 17));
+        if(zoomFlag == 1){
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(coor));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coor, 17));
+        }
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
